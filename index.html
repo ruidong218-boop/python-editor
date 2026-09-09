@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Coding Exam</title>
+
+<!-- Code editor: CodeMirror (from cdnjs) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+
+<!-- Python runtime: Pyodide (from jsDelivr). To update, change the version number below. -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+<style>
+  :root{
+    --paper:#f3f5f4;
+    --panel:#ffffff;
+    --ink:#17252c;
+    --ink-soft:#54666e;
+    --line:#dbe2e4;
+    --go:#1f6f5c;
+    --go-dark:#175a4a;
+    --term-bg:#12202a;
+    --term-ink:#d6e4e2;
+    --term-dim:#7d95a0;
+    --err:#e07a63;
+    --focus:#1f6f5c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:15px;
+    line-height:1.5;
+  }
+  .app{display:flex;flex-direction:column;min-height:100%}
+
+  /* ---------- Top bar ---------- */
+  header{
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding:12px 20px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+  }
+  header .title{font-size:17px;font-weight:650;letter-spacing:.2px}
+  header .spacer{flex:1}
+  .status{display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:13.5px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#c9a227;box-shadow:0 0 0 3px rgba(201,162,39,.15)}
+  .status.ready .dot{background:var(--go);box-shadow:0 0 0 3px rgba(31,111,92,.15)}
+  .field{display:flex;align-items:center;gap:6px}
+  .field label{font-size:13px;color:var(--ink-soft)}
+  .field input{
+    width:150px;padding:6px 9px;border:1px solid var(--line);border-radius:7px;
+    font:inherit;font-size:13.5px;background:#fafcfb;color:var(--ink);
+  }
+  .field input:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:transparent}
+
+  /* ---------- Buttons ---------- */
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid transparent;transition:background .12s,border-color .12s}
+  button:disabled{cursor:not-allowed;opacity:.5}
+  .btn-ghost{background:#fafcfb;border-color:var(--line);color:var(--ink);padding:7px 13px}
+  .btn-ghost:hover:not(:disabled){background:#eef2f1}
+  .btn-run{background:var(--go);color:#fff;padding:8px 18px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+  .btn-run:hover:not(:disabled){background:var(--go-dark)}
+  .btn-run .kbd{font-size:11px;opacity:.75;font-weight:500}
+  .btn-copy{background:#eaf3f0;border-color:#bcd8ce;color:var(--go-dark);padding:7px 15px;font-weight:600}
+  .btn-copy:hover:not(:disabled){background:#dfeee8}
+  .save-state{font-size:12.5px;color:var(--ink-soft);white-space:nowrap}
+  .notice{
+    padding:9px 20px;background:#fdf4e3;border-bottom:1px solid #f0e0bd;
+    color:#7a5a12;font-size:13px;line-height:1.45;
+  }
+  .notice strong{color:#5f4409}
+
+  /* ---------- Body ---------- */
+  main{flex:1;display:flex;min-height:0}
+  .question{
+    flex:0 0 340px;min-width:0;
+    padding:22px 24px;background:var(--panel);
+    overflow:auto;
+  }
+  .question h2{margin:0 0 4px;font-size:13px;font-weight:650;color:var(--go);letter-spacing:.4px}
+  .question .body{margin-top:14px;color:var(--ink);font-size:14.5px}
+  .question .body p{margin:0 0 12px}
+  .question .body h3{font-size:14px;margin:18px 0 6px}
+  .question .body pre{
+    background:#f0f4f3;border:1px solid var(--line);border-radius:8px;
+    padding:12px 14px;overflow:auto;font-family:ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+    font-size:13px;color:var(--ink);
+  }
+
+  /* ---------- Available libraries (left panel) ---------- */
+  .libs{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+  .libs h2{margin:0 0 4px;font-size:13px;font-weight:650;color:var(--go);letter-spacing:.4px}
+  .libs h3{font-size:12.5px;margin:14px 0 4px;color:var(--ink);font-weight:650}
+  .libs .libs-note{font-size:12.5px;color:var(--ink-soft);margin:6px 0 4px;line-height:1.5}
+  .libs .lib-row{font-size:13px;color:var(--ink);margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;line-height:1.7;word-break:break-word}
+  .libs code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#eef2f1;padding:1px 4px;border-radius:4px}
+
+  /* ---------- Draggable dividers ---------- */
+  .gutter{background:var(--line);position:relative;z-index:2;touch-action:none}
+  .gutter:hover{background:#b3c3c1}
+  .gutter.dragging{background:var(--go)}
+  .gutter.col{flex:0 0 6px;cursor:col-resize;align-self:stretch}
+  .gutter.row{flex:0 0 6px;height:6px;width:100%;cursor:row-resize}
+
+  .workspace{flex:1 1 0;display:flex;flex-direction:column;min-width:0;min-height:0}
+  .editor-wrap{flex:1 1 0;min-height:120px;display:flex}
+  .CodeMirror{
+    height:100%;width:100%;font-family:ui-monospace,"Cascadia Code","Source Code Pro",Menlo,Consolas,monospace;
+    font-size:14px;line-height:1.6;
+  }
+
+  /* ---------- Code tabs ---------- */
+  .tabs{display:flex;align-items:stretch;gap:3px;background:var(--panel);border-bottom:1px solid var(--line);padding:6px 8px 0;overflow-x:auto}
+  .tab{display:flex;align-items:center;gap:6px;padding:6px 8px 6px 12px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:#eef2f1;color:var(--ink-soft);font-size:13px;cursor:pointer;white-space:nowrap;max-width:220px}
+  .tab.active{background:#fff;color:var(--ink);font-weight:600;box-shadow:inset 0 2px 0 var(--go)}
+  .tab .name{overflow:hidden;text-overflow:ellipsis;max-width:150px}
+  .tab .name-input{font:inherit;font-size:13px;border:1px solid var(--go);border-radius:4px;padding:1px 4px;width:120px}
+  .tab .close{border:none;background:transparent;color:var(--ink-soft);font-size:15px;line-height:1;padding:1px 5px;border-radius:4px;cursor:pointer}
+  .tab .close:hover{background:#dde5e3;color:var(--ink)}
+  .tab.single .close{display:none}
+  .tab-add{border:none;background:transparent;color:var(--ink-soft);font-size:18px;line-height:1;padding:4px 11px;cursor:pointer;border-radius:6px;align-self:center}
+  .tab-add:hover{background:#eef2f1;color:var(--ink)}
+
+  .toolbar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:11px 16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    background:var(--panel);
+  }
+  .toolbar .grow{flex:1}
+  .toolbar .hint{font-size:12.5px;color:var(--ink-soft)}
+
+  .io{display:flex;flex:0 0 260px;min-height:0}
+  .io > section{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .io .stdin{flex:0 0 46%}
+  .io .label{padding:9px 16px 6px;font-size:12px;font-weight:600;color:var(--ink-soft);background:var(--panel)}
+  textarea.stdin-box{
+    flex:1;resize:none;border:none;padding:10px 16px;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:13.5px;background:#fbfdfc;color:var(--ink);
+  }
+  textarea.stdin-box:focus{outline:none;background:#fff}
+  .output{
+    flex:1;margin:0;padding:12px 16px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    background:var(--term-bg);color:var(--term-ink);
+    font-family:ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;font-size:13.5px;line-height:1.55;
+  }
+  .output.empty{color:var(--term-dim)}
+  .output .err{color:var(--err)}
+  .out-text{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit;color:inherit}
+  .out-img{display:block;max-width:100%;background:#fff;border-radius:6px;margin:12px 0;padding:6px}
+  .io .out-wrap{flex:1 1 0;background:var(--term-bg)}
+  .io .out-wrap .label{background:var(--term-bg);color:var(--term-dim)}
+
+  /* ---------- Responsive: stack vertically on narrow screens ---------- */
+  @media (max-width:860px){
+    .gutter{display:none}
+    main{flex-direction:column}
+    .question{flex:0 0 auto !important;max-height:36vh;border-bottom:1px solid var(--line)}
+    .io{flex-direction:column;flex:0 0 auto !important}
+    .io .stdin{flex:0 0 auto !important;min-height:150px;border-bottom:1px solid var(--line)}
+    .io .out-wrap{min-height:200px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <!-- Teacher: edit the exam title here -->
+    <div class="title">Python Coding Exam</div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Loading Python…</span></div>
+    <div class="spacer"></div>
+    <div class="field"><label for="stuName">Name / ID</label><input id="stuName" placeholder="optional"></div>
+    <span class="save-state" id="saveState"></span>
+    <button class="btn-copy" id="copyBtn">Copy code</button>
+    <button class="btn-ghost" id="downloadBtn">Download code</button>
+  </header>
+
+  <div class="notice" id="notice">
+    This page <strong>does not save your code to a server</strong>. When you're done, <strong>copy your code into Canvas</strong> to submit.
+  </div>
+
+  <main>
+    <!-- ========================================================= -->
+    <!--  Teacher: edit the problem and instructions here.          -->
+    <!--  You can use <p> <h3> <pre> and other tags.                -->
+    <!-- ========================================================= -->
+    <div class="question">
+      <h2>PROBLEM</h2>
+      <div class="body">
+        <p>Read a positive integer <code>n</code>, then compute and print the sum of all integers from 1 to n.</p>
+        <h3>Input</h3>
+        <p>One line: a positive integer n. (Provide it in the Input box on the right, one value per line.)</p>
+        <h3>Output</h3>
+        <p>One line: the sum from 1 to n.</p>
+        <h3>Example</h3>
+        <pre>Input
+100
+
+Output
+5050</pre>
+      </div>
+
+      <div class="libs">
+        <h2>AVAILABLE LIBRARIES</h2>
+        <p class="libs-note">Type <code>import name</code> to use. The full Python standard library is available. The packages below load automatically on first import (needs internet the first time). Other scientific packages may also work — if one isn't available you'll see <code>ModuleNotFoundError</code>.</p>
+        <h3>Standard library (selection)</h3>
+        <p class="lib-row">math · random · statistics · datetime · collections · itertools · functools · re · json · string · decimal · fractions · heapq · bisect</p>
+        <h3>Data &amp; scientific</h3>
+        <p class="lib-row">numpy · pandas · scipy · sympy · matplotlib</p>
+        <h3>Machine learning</h3>
+        <p class="lib-row">scikit-learn (<code>import sklearn</code>) · statsmodels</p>
+        <h3>Other</h3>
+        <p class="lib-row">networkx · pillow (<code>import PIL</code>) · beautifulsoup4 (<code>import bs4</code>) · regex</p>
+      </div>
+    </div>
+    <!-- ========================================================= -->
+
+    <div class="gutter col main-col" id="gutterMain"></div>
+
+    <div class="workspace">
+      <div class="tabs" id="tabs"></div>
+      <div class="editor-wrap"><textarea id="code"># Write your code here
+n = int(input())
+total = 0
+for i in range(1, n + 1):
+    total += i
+print(total)
+</textarea></div>
+
+      <div class="toolbar">
+        <button class="btn-run" id="runBtn" disabled>
+          <span>Run</span><span class="kbd">Ctrl/&#8984; + Enter</span>
+        </button>
+        <button class="btn-ghost" id="clearBtn">Clear output</button>
+        <div class="grow"></div>
+      </div>
+
+      <div class="gutter row mid-row" id="gutterRow"></div>
+
+      <div class="io">
+        <section class="stdin">
+          <div class="label">Input (stdin — one value per line, read by input())</div>
+          <textarea class="stdin-box" id="stdin" spellcheck="false">100</textarea>
+        </section>
+        <div class="gutter col io-col" id="gutterIo"></div>
+        <section class="out-wrap">
+          <div class="label">Output</div>
+          <div class="output empty" id="output">Program output will appear here after you click Run.</div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- Initialize the code editor ----
+  const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+    mode: "python",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    indentWithTabs: false,
+    matchBrackets: true,
+    lineWrapping: false,
+    extraKeys: {
+      "Tab": (cm) => cm.replaceSelection("    "),
+      "Cmd-Enter": () => runCode(),
+      "Ctrl-Enter": () => runCode(),
+    },
+  });
+
+  const statusEl = document.getElementById("status");
+  const statusText = document.getElementById("statusText");
+  const runBtn = document.getElementById("runBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const saveStateEl = document.getElementById("saveState");
+  const tabsEl = document.getElementById("tabs");
+  const outputEl = document.getElementById("output");
+  const stdinEl = document.getElementById("stdin");
+  const nameEl = document.getElementById("stuName");
+
+  let pyodide = null;
+  let running = false;
+
+  // ---- Python side: capture text output and matplotlib figures, provide input(), format errors ----
+  const PY_SETUP = `
+import sys, io, builtins, traceback, json, base64
+
+def _collect_figures():
+    imgs = []
+    try:
+        import matplotlib.pyplot as plt
+        for num in plt.get_fignums():
+            fig = plt.figure(num)
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", bbox_inches="tight", dpi=110)
+            buf.seek(0)
+            imgs.append("data:image/png;base64," + base64.b64encode(buf.read()).decode("ascii"))
+        plt.close("all")
+    except Exception:
+        pass
+    return imgs
+
+def _run_exam(user_code, stdin_text):
+    out = io.StringIO()
+    old_out, old_err, old_in = sys.stdout, sys.stderr, sys.stdin
+    old_input = builtins.input
+    sys.stdout = out
+    sys.stderr = out
+    sys.stdin = io.StringIO(stdin_text or "")
+    _lines = iter((stdin_text or "").split("\\n"))
+    def _input(prompt=""):
+        if prompt:
+            print(prompt, end="")
+        try:
+            val = next(_lines)
+        except StopIteration:
+            raise EOFError("EOF: no more input lines available for input()")
+        print(val)
+        return val
+    builtins.input = _input
+    # Render matplotlib headlessly; figures are collected after the code runs
+    try:
+        import matplotlib
+        matplotlib.use("Agg", force=True)
+    except Exception:
+        pass
+    error = False
+    ns = {"__name__": "__main__"}
+    try:
+        exec(compile(user_code, "<your code>", "exec"), ns)
+    except SystemExit:
+        pass
+    except BaseException as e:
+        error = True
+        tb = e.__traceback__
+        tb = tb.tb_next if (tb and tb.tb_next) else tb
+        out.write("".join(traceback.format_exception(type(e), e, tb)))
+    finally:
+        sys.stdout, sys.stderr, sys.stdin = old_out, old_err, old_in
+        builtins.input = old_input
+    images = _collect_figures()
+    return json.dumps({"text": out.getvalue(), "error": error, "images": images})
+`;
+
+  // ---- Load Pyodide ----
+  async function boot() {
+    try {
+      pyodide = await loadPyodide();
+      await pyodide.runPythonAsync(PY_SETUP);
+      statusEl.classList.add("ready");
+      statusText.textContent = "Ready";
+      runBtn.disabled = false;
+    } catch (err) {
+      statusText.textContent = "Failed to load. Check your connection and refresh.";
+      console.error(err);
+    }
+  }
+
+  // ---- Run the student's code ----
+  async function runCode() {
+    if (!pyodide || running) return;
+    running = true;
+    runBtn.disabled = true;
+    statusText.textContent = "Running…";
+
+    const code = editor.getValue();
+    const stdin = stdinEl.value;
+
+    // Let "Running…" paint first
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Auto-load third-party libraries imported in the code (numpy, pandas, etc. that Pyodide bundles).
+    // Standard-library modules need no loading and are skipped; the first load of a package requires internet.
+    try {
+      statusText.textContent = "Preparing libraries…";
+      await pyodide.loadPackagesFromImports(code);
+    } catch (e) {
+      console.warn("Failed to load packages (offline, or the package isn't available in Pyodide):", e);
+    }
+    statusText.textContent = "Running…";
+
+    let data;
+    try {
+      const fn = pyodide.globals.get("_run_exam");
+      const result = fn(code, stdin);
+      fn.destroy();
+      data = JSON.parse(result);
+    } catch (err) {
+      data = { text: "Runtime error: " + err + "\n", error: true, images: [] };
+    }
+
+    renderOutput(data);
+
+    running = false;
+    runBtn.disabled = false;
+    statusText.textContent = "Ready";
+  }
+
+  function renderOutput(data) {
+    const text = (data && data.text) || "";
+    const images = (data && data.images) || [];
+    const hasError = !!(data && data.error);
+
+    outputEl.className = "output";
+    outputEl.textContent = "";
+
+    if (text.trim() === "" && images.length === 0) {
+      outputEl.className = "output empty";
+      outputEl.textContent = "(no output)";
+      return;
+    }
+
+    if (text.trim() !== "") {
+      const pre = document.createElement("pre");
+      pre.className = "out-text";
+      if (hasError) {
+        const idx = text.lastIndexOf("Traceback (most recent call last)");
+        if (idx > 0) {
+          pre.appendChild(document.createTextNode(text.slice(0, idx)));
+          const errSpan = document.createElement("span");
+          errSpan.className = "err";
+          errSpan.textContent = text.slice(idx);
+          pre.appendChild(errSpan);
+        } else {
+          const errSpan = document.createElement("span");
+          errSpan.className = "err";
+          errSpan.textContent = text;
+          pre.appendChild(errSpan);
+        }
+      } else {
+        pre.textContent = text;
+      }
+      outputEl.appendChild(pre);
+    }
+
+    images.forEach((src) => {
+      const img = document.createElement("img");
+      img.className = "out-img";
+      img.src = src;
+      img.alt = "matplotlib figure";
+      outputEl.appendChild(img);
+    });
+  }
+
+  // ---- Clear output ----
+  clearBtn.addEventListener("click", () => {
+    outputEl.className = "output empty";
+    outputEl.textContent = "Program output will appear here after you click Run.";
+  });
+
+  // ---- Download code as a .py file ----
+  downloadBtn.addEventListener("click", () => {
+    const name = nameEl.value.trim().replace(/[\\/:*?"<>|]/g, "_");
+    const filename = name ? `solution_${name}.py` : "solution.py";
+    const blob = new Blob([editor.getValue()], { type: "text/x-python;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // ---- Copy code to the clipboard (to paste into the Canvas submission box) ----
+  copyBtn.addEventListener("click", async () => {
+    const text = editor.getValue();
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch (e) { ok = false; }
+    if (!ok) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+    }
+    copyBtn.textContent = ok ? "Copied ✓" : "Copy failed — select all and copy manually";
+    setTimeout(() => { copyBtn.textContent = "Copy code"; }, 1600);
+  });
+
+  // ---- Multiple code tabs + local autosave.
+  //      Each tab is an independent code buffer for debugging. Run / Copy / Download act on the ACTIVE tab.
+  //      Autosave persists all tabs, and degrades gracefully (no errors) where local storage is
+  //      disabled, e.g. LockDown Browser. ----
+  const STORAGE_KEY = "python-exam-tabs:" + location.pathname;
+  let storageOK = true;
+
+  function safeSet(v) {
+    try { localStorage.setItem(STORAGE_KEY, v); return true; }
+    catch (e) { storageOK = false; return false; }
+  }
+  function safeGet() {
+    try { return localStorage.getItem(STORAGE_KEY); }
+    catch (e) { storageOK = false; return null; }
+  }
+  function nowTime() {
+    const d = new Date(), p = (n) => String(n).padStart(2, "0");
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  const STARTER = editor.getValue();
+  let tabs = [];
+  let activeId = null;
+  let uid = 1;
+
+  function makeTab(name, text) {
+    return { id: uid++, name: name, doc: new CodeMirror.Doc(text, "python") };
+  }
+  function activeTab() { return tabs.find((t) => t.id === activeId); }
+
+  function serialize() {
+    const idx = tabs.findIndex((t) => t.id === activeId);
+    return JSON.stringify({
+      active: idx < 0 ? 0 : idx,
+      tabs: tabs.map((t) => ({ name: t.name, code: t.doc.getValue() })),
+    });
+  }
+  function saveNow() {
+    if (!storageOK) return;
+    if (safeSet(serialize())) saveStateEl.textContent = "Saved locally · " + nowTime();
+  }
+  let saveTimer = null;
+  function scheduleSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 800);
+  }
+
+  function activateTab(id) {
+    const t = tabs.find((x) => x.id === id);
+    if (!t) return;
+    activeId = id;
+    editor.swapDoc(t.doc);
+    renderTabs();
+    editor.focus();
+    scheduleSave();
+  }
+  function addTab(name, text) {
+    const n = name || ("scratch-" + tabs.length + ".py");
+    const t = makeTab(n, text != null ? text : "# New scratch buffer\n");
+    tabs.push(t);
+    activateTab(t.id);
+  }
+  function closeTab(id) {
+    if (tabs.length <= 1) return;                 // always keep at least one tab
+    const idx = tabs.findIndex((t) => t.id === id);
+    if (idx < 0) return;
+    tabs.splice(idx, 1);
+    if (activeId === id) activateTab(tabs[Math.max(0, idx - 1)].id);
+    else { renderTabs(); scheduleSave(); }
+  }
+  function renameTab(id, name) {
+    const t = tabs.find((x) => x.id === id);
+    if (!t) return;
+    const clean = name.trim();
+    if (clean) t.name = clean;
+    renderTabs();
+    scheduleSave();
+  }
+
+  function startRename(tabEl, t) {
+    const input = document.createElement("input");
+    input.className = "name-input";
+    input.value = t.name;
+    const nameSpan = tabEl.querySelector(".name");
+    tabEl.replaceChild(input, nameSpan);
+    input.focus();
+    input.select();
+    let done = false;
+    const commit = () => { if (done) return; done = true; renameTab(t.id, input.value); };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); commit(); }
+      else if (e.key === "Escape") { done = true; renderTabs(); }
+    });
+    input.addEventListener("blur", commit);
+  }
+
+  function renderTabs() {
+    tabsEl.textContent = "";
+    tabs.forEach((t) => {
+      const el = document.createElement("div");
+      el.className = "tab" + (t.id === activeId ? " active" : "") + (tabs.length === 1 ? " single" : "");
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = t.name;
+      name.title = "Double-click to rename";
+      name.addEventListener("click", () => activateTab(t.id));
+      name.addEventListener("dblclick", (e) => { e.stopPropagation(); startRename(el, t); });
+      el.appendChild(name);
+      const close = document.createElement("button");
+      close.className = "close";
+      close.textContent = "×";
+      close.title = "Close tab";
+      close.addEventListener("click", (e) => { e.stopPropagation(); closeTab(t.id); });
+      el.appendChild(close);
+      tabsEl.appendChild(el);
+    });
+    const add = document.createElement("button");
+    add.className = "tab-add";
+    add.textContent = "+";
+    add.title = "New tab";
+    add.addEventListener("click", () => addTab());
+    tabsEl.appendChild(add);
+  }
+
+  // On load, rebuild tabs from saved state, or start with a single "main.py" tab
+  (function initTabs() {
+    const saved = safeGet();
+    let restored = false;
+    if (saved) {
+      try {
+        const obj = JSON.parse(saved);
+        if (obj && Array.isArray(obj.tabs) && obj.tabs.length) {
+          tabs = obj.tabs.map((x) => makeTab(x.name || "untitled.py", typeof x.code === "string" ? x.code : ""));
+          const ai = Number.isInteger(obj.active) ? obj.active : 0;
+          activeId = tabs[Math.min(Math.max(ai, 0), tabs.length - 1)].id;
+          restored = true;
+        }
+      } catch (e) { restored = false; }
+    }
+    if (!restored) {
+      tabs = [makeTab("main.py", STARTER)];
+      activeId = tabs[0].id;
+    }
+    editor.swapDoc(activeTab().doc);
+    renderTabs();
+    if (!storageOK) saveStateEl.textContent = "Local autosave unavailable";
+    else if (restored) saveStateEl.textContent = "Restored your previous code ✓";
+    editor.on("change", scheduleSave);
+    window.addEventListener("beforeunload", saveNow);
+  })();
+
+  // ---- Draggable panel dividers (resize left panel width, output height, and input width) ----
+  function setupResizers() {
+    const questionEl = document.querySelector(".question");
+    const ioEl = document.querySelector(".io");
+    const stdinSection = document.querySelector(".io .stdin");
+    const workspaceEl = document.querySelector(".workspace");
+    const LAYOUT_KEY = "python-exam-layout:" + location.pathname;
+
+    function saveLayout() {
+      try {
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify({
+          q: questionEl.style.flexBasis,
+          io: ioEl.style.flexBasis,
+          stdin: stdinSection.style.flexBasis,
+        }));
+      } catch (e) { /* storage disabled — ignore */ }
+    }
+    function restoreLayout() {
+      try {
+        const s = localStorage.getItem(LAYOUT_KEY);
+        if (!s) return;
+        const o = JSON.parse(s);
+        if (o.q) questionEl.style.flexBasis = o.q;
+        if (o.io) ioEl.style.flexBasis = o.io;
+        if (o.stdin) stdinSection.style.flexBasis = o.stdin;
+        editor.refresh();
+      } catch (e) { /* ignore */ }
+    }
+
+    function drag(gutter, onMove) {
+      if (!gutter) return;
+      gutter.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        try { gutter.setPointerCapture(e.pointerId); } catch (_) {}
+        gutter.classList.add("dragging");
+        document.body.style.userSelect = "none";
+        const move = (ev) => onMove(ev);
+        const up = () => {
+          gutter.classList.remove("dragging");
+          document.body.style.userSelect = "";
+          gutter.removeEventListener("pointermove", move);
+          gutter.removeEventListener("pointerup", up);
+          saveLayout();
+        };
+        gutter.addEventListener("pointermove", move);
+        gutter.addEventListener("pointerup", up);
+      });
+    }
+
+    // Left panel width
+    drag(document.getElementById("gutterMain"), (ev) => {
+      const rect = questionEl.getBoundingClientRect();
+      let w = ev.clientX - rect.left;
+      w = Math.max(200, Math.min(w, window.innerWidth * 0.6));
+      questionEl.style.flexBasis = w + "px";
+      editor.refresh();
+    });
+
+    // Output/input area height
+    drag(document.getElementById("gutterRow"), (ev) => {
+      const rect = ioEl.getBoundingClientRect();
+      let h = rect.bottom - ev.clientY;
+      h = Math.max(120, Math.min(h, workspaceEl.clientHeight - 160));
+      ioEl.style.flexBasis = h + "px";
+      editor.refresh();
+    });
+
+    // Input width inside the io area
+    drag(document.getElementById("gutterIo"), (ev) => {
+      const rect = stdinSection.getBoundingClientRect();
+      let w = ev.clientX - rect.left;
+      w = Math.max(120, Math.min(w, ioEl.clientWidth - 160));
+      stdinSection.style.flexBasis = w + "px";
+    });
+
+    restoreLayout();
+  }
+  setupResizers();
+
+  runBtn.addEventListener("click", runCode);
+
+  boot();
+})();
+</script>
+</body>
+</html>
